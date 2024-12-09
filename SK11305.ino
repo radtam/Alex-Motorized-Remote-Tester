@@ -1,4 +1,3 @@
-
 #include <AccelStepper.h>
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
@@ -51,7 +50,7 @@
 //	The strings will be stored in prog memory to save SRAM
 //  ** see Arduino Reference on PROGMEM for details...
 //						        "0123456789012345"
-const char display0[] PROGMEM = "Simple motor    ";
+const char display0[] PROGMEM = "SK11305BrekBeams";
 const char display1[] PROGMEM = "Menu <any key>  ";
 const char display2[] PROGMEM = "Stepper Drv Cfg ";
 const char display3[] PROGMEM = "Cycle Test Cfg  ";
@@ -898,9 +897,15 @@ void monitorCycleTest(void) {
 		switch (myCycleTest.index) {
 			case 0:				// wait for start of cycle - this case should not happen but just in case...
 			case 1:       // moves bottom down, assumes both in top position
-        botDown();
-        sTime = millis();
-        myCycleTest.index = 2;
+        if (isUp()) {
+          botDown();
+          sTime = millis();
+          myCycleTest.index = 2;
+        } else {
+          Serial.println("Break beam sensors say the shade is not up");
+          pauseCycleTest();
+          myCycleTest.index = 2;
+        }
         break;
       case 2:       // wait
         if (time_ms >= (uint32_t(myCycleTest.dwell_time) * 1000)) {
@@ -911,10 +916,17 @@ void monitorCycleTest(void) {
         else updateDwellTimer(time_ms/1000);  // update the display with the dwell timer
         break;
       case 3:       // move bottom up
-        botUp();
-        sTime = millis();
-        myCycleTest.index = 4;
-        break;     
+        if (isDown()) {
+          botUp();
+          sTime = millis();
+          myCycleTest.index = 4;
+        } else {
+          Serial.println("Break beam sensors say the shade is not Down");
+          pauseCycleTest();
+          myCycleTest.index = 3;
+        }
+        break;
+     
       case 4:       // wait
         if (time_ms >= (uint32_t(myCycleTest.dwell_time) * 1000)) {
           sTime = millis();
@@ -1006,4 +1018,16 @@ void midDown()  {
   digitalWrite(DOWN_PIN, LOW);
   delay(500);
   digitalWrite(DOWN_PIN, HIGH);
+}
+
+bool isUp() {
+  int topSensorValue = analogRead(A2);
+  int botSensorValue = analogRead(A3);
+  return (topSensorValue == HIGH && botSensorValue == HIGH);  // if both beams are open, the shade is up return true 
+}
+
+bool isDown() {
+  int topSensorValue = analogRead(A2);
+  int botSensorValue = analogRead(A3);
+  return (topSensorValue == LOW && botSensorValue == LOW);  // if both beams are closed, the shade is down return true
 }
