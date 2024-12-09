@@ -1,10 +1,3 @@
-/* v01
-
-   
-
-       20 FEB 2023: Carried over from BUTD
-				
-*/
 
 #include <AccelStepper.h>
 #include <LiquidCrystal.h>
