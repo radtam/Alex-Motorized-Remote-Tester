@@ -899,12 +899,15 @@ void monitorCycleTest(void) {
 			case 1:       // moves bottom down, assumes both in top position
         if (isUp()) {
           botDown();
+          
           sTime = millis();
           myCycleTest.index = 2;
         } else {
           Serial.println("Break beam sensors say the shade is not up");
-          pauseCycleTest();
-          myCycleTest.index = 2;
+          //pauseCycleTest();
+          isPartial();
+          delay(500);
+          myCycleTest.index = 1;
         }
         break;
       case 2:       // wait
@@ -922,7 +925,9 @@ void monitorCycleTest(void) {
           myCycleTest.index = 4;
         } else {
           Serial.println("Break beam sensors say the shade is not Down");
-          pauseCycleTest();
+          isPartial();
+         // pauseCycleTest();
+          delay(500);
           myCycleTest.index = 3;
         }
         break;
@@ -1023,11 +1028,37 @@ void midDown()  {
 bool isUp() {
   int topSensorValue = analogRead(A2);
   int botSensorValue = analogRead(A3);
-  return (topSensorValue == HIGH && botSensorValue == HIGH);  // if both beams are open, the shade is up return true 
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  return (topSensorValue > 50  && botSensorValue > 50);  // if both beams are open, the shade is up return true 
 }
+
+bool isPartial() {
+  int topSensorValue = analogRead(A2);
+  int botSensorValue = analogRead(A3);
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  if(topSensorValue == LOW && botSensorValue == HIGH) {
+    Serial.println("Partial");
+    Serial.println("Top Broken, Bottom Open");
+  } else if (topSensorValue == HIGH && botSensorValue == LOW) {
+    Serial.println("Partial");
+    Serial.println("Top Open, Bottom Broken");
+  } else if (topSensorValue == LOW && botSensorValue == LOW) {
+    Serial.println("Top Broken, Bottom Broken");
+  }
+  }
 
 bool isDown() {
   int topSensorValue = analogRead(A2);
   int botSensorValue = analogRead(A3);
-  return (topSensorValue == LOW && botSensorValue == LOW);  // if both beams are closed, the shade is down return true
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  return (topSensorValue < 50 && botSensorValue < 50);  // if both beams are closed, the shade is down return true
 }
