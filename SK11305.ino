@@ -44,6 +44,7 @@
 
 #define INVALID_DATA		0xFFFF
 
+
 //  ******************************************************
 //	****  LCD Display Screens 16x2 	**********************
 //  ******************************************************
@@ -869,6 +870,28 @@ void updateDwellTimer(uint16_t timer) {
 	
 	lcd.print(dtimer);
 }
+//*************************************************************
+void clearTimeout() {
+	lcd.setCursor(13,1); lcd.print("   ");
+}
+
+void updateTimeout(uint16_t timer) {
+	uint16_t dtimer = 0;
+	
+	// display the dwell timer as a count down timer (timer variable is counting up...)
+	dtimer = myCycleTest.move_timeout - timer;
+	
+	// clear the dwell timer data field
+	clearTimeout();
+	
+	// set the cursor position based on the size of the data
+	if (dtimer < 10) lcd.setCursor(15,1);
+	else if (dtimer < 100) lcd.setCursor(14,1);
+	else lcd.setCursor(13,1);
+	
+	lcd.print(dtimer);
+}
+//******************************************************************
 
 void updateCycleStatus(void) {
 	// clear the changing data field
@@ -891,20 +914,29 @@ void monitorCycleTest(void) {
 	
 	static uint8_t num_of_tries = 0;
 	uint32_t time_ms = 0;		// variable that converts the ticks variable into milliseconds... 1 tick = 10msec
+
 	
 	time_ms = millis()-sTime;
 	if (myLCD.row1_index == INDEX_CYCLE_ACTIVE) {
 		switch (myCycleTest.index) {
 			case 0:				// wait for start of cycle - this case should not happen but just in case...
+      
 			case 1:       // moves bottom down, assumes both in top position
         if (isUp()) {
           botDown();
           sTime = millis();
           myCycleTest.index = 2;
         } else {
-          Serial.println("Break beam sensors say the shade is not up");
-          pauseCycleTest();
-          myCycleTest.index = 2;
+            Serial.println("Break beam sensors say the shade is not up");
+            isPartial();
+            if (time_ms >= (uint32_t(myCycleTest.move_timeout) * 1000)) {
+              sTime = millis();
+              pauseCycleTest();
+              myCycleTest.index = 2;
+              clearTimeout();
+            }
+              else updateTimeout(time_ms/1000);  // update the display with the dwell timer
+        break;
         }
         break;
       case 2:       // wait
@@ -922,8 +954,15 @@ void monitorCycleTest(void) {
           myCycleTest.index = 4;
         } else {
           Serial.println("Break beam sensors say the shade is not Down");
-          pauseCycleTest();
-          myCycleTest.index = 3;
+          isPartial();
+          if (time_ms >= (uint32_t(myCycleTest.move_timeout) * 1000)) {
+              sTime = millis();
+              pauseCycleTest();
+              myCycleTest.index = 4;
+              clearTimeout();
+            }
+              else updateTimeout(time_ms/1000);  // update the display with the dwell timer
+        break;
         }
         break;
      
@@ -1023,11 +1062,43 @@ void midDown()  {
 bool isUp() {
   int topSensorValue = analogRead(A2);
   int botSensorValue = analogRead(A3);
-  return (topSensorValue == HIGH && botSensorValue == HIGH);  // if both beams are open, the shade is up return true 
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  return (topSensorValue > 50  && botSensorValue > 50);  // if both beams are open, the shade is up return true 
 }
+
+bool isPartial() {
+  int topSensorValue = analogRead(A2);
+  int botSensorValue = analogRead(A3);
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  if(topSensorValue == LOW && botSensorValue == HIGH) {
+    Serial.println("Partial");
+    Serial.println("Top Broken, Bottom Open");
+  } else if (topSensorValue == HIGH && botSensorValue == LOW) {
+    Serial.println("Partial");
+    Serial.println("Top Open, Bottom Broken");
+  } else if (topSensorValue == LOW && botSensorValue == LOW) {
+    Serial.println("Top Broken, Bottom Broken");
+  }
+  }
 
 bool isDown() {
   int topSensorValue = analogRead(A2);
   int botSensorValue = analogRead(A3);
-  return (topSensorValue == LOW && botSensorValue == LOW);  // if both beams are closed, the shade is down return true
+  Serial.print("Top: ");
+  Serial.println(topSensorValue);
+  Serial.print("Bot: ");
+  Serial.println(botSensorValue);
+  return (topSensorValue < 50 && botSensorValue < 50);  // if both beams are closed, the shade is down return true
 }
+
+void timeoutCount() {
+  
+}
+  
+    
